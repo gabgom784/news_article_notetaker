@@ -1,0 +1,6 @@
+flask
+flask-cors
+newspaper3k
+click==8.1.7
+lxml_html_clean
+

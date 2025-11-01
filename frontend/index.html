@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="style.css">
+  <title>Article Note Taker</title>
+</head>
+<body>
+  <div id="main-container">
+    <div id="article-section">
+        <h1>📰 Article Note Taker</h1>
+
+        <h2>Add an Article</h2>
+        <form id="article-form">
+            <input type="text" id="url" placeholder="Article URL" required />
+            <button type="submit">Add Article</button>
+            <div class="category-filter-wrapper">
+                <button id="FilterCategoriesButton" type="button">By Category</button>
+                <div id="categoryDropdown"></div>
+            </div>
+            <button id="dateFilterButton" type="button">Filter By Time</button>
+        </form>
+
+        <h2>Articles</h2>
+        <ul id="articles-list"></ul>
+    </div>
+    <div id="notes-section">
+        <h1 id="current-notes-title">Notes for respective article</h1>
+        <textarea id="notes-content">
+            <p>Here is a notes placeholder</p>
+        </textarea>
+        <div id="textBoxButtons">
+	            <button id="saveNotesButton">Save Notes</button>
+	            <button id="summarizeButton">Summarize Article</button>
+	    </div>
+	    <textarea id="summary-content"></textarea>
+	    </div>
+	  </div>
+
+      <div id="categoryPopup" class="popup hidden">
+        <h2>Select Categories</h2>
+        <div id="categoryBubbles">
+          <!-- Category bubbles will be inserted here -->
+        </div>
+        <button id="saveCategories">Save</button>
+      </div>
+      
+
+      <div id="datePopup" class="hidden">
+          <label>
+            From:
+            <input type="date" id="fromDate">
+          </label>
+          <label>
+            To:
+            <input type="date" id="toDate">
+          </label>
+          <button id="applyDateFilter">Apply</button>
+          <button id="closeDatePopup">Close</button>
+       </div>
+	
+	  <script src="script.js"></script>
+	</body>
+</html>

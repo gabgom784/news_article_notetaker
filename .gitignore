@@ -1,0 +1,19 @@
+# Python
+backend/venv/
+./venv
+__pycache__/
+*.pyc
+*.db
+
+# SQLite Databases
+*.db
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+
+# Editor junk
+.DS_Store
+.vscode/
+
