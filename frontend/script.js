@@ -380,7 +380,11 @@ async function showCategoryPopup(articleId){
         categoryBubble.className = "bubble";
         categoryBubble.innerText = category;
         categoryBubble.addEventListener("click", () => {
-            categoryBubble.classList.add("selected");
+            if(categoryBubble.classList.contains("selected")){
+                categoryBubble.classList.remove("selected");
+            } else {
+                categoryBubble.classList.add("selected");
+            }
         });
         bubbleContainer.appendChild(categoryBubble);
     });

@@ -233,7 +233,12 @@ def add_category(article_id):
     c = conn.cursor()
 
     category = data.get("category")
-    c.execute('''INSERT INTO categories (article_id, category) VALUES (?, ?)''', (article_id, category))
+    try:
+        c.execute('''INSERT INTO categories (article_id, category) SELECT ?, ?
+                  WHERE NOT EXISTS (
+                  SELECT 1 FROM categories WHERE article_id = ? AND category = ?)''', (article_id, category, article_id, category))
+    except sqlite3.IntegrityError:
+        pass
 
     conn.commit()
     conn.close()
