@@ -357,12 +357,22 @@ async function loadSummary(article_id){
 /////////////////////////////////////////////////////////////////
 //// The Section for The Category Bubble when Adding Article ////
 /////////////////////////////////////////////////////////////////
-const categories = ['Politics', 'Tech', 'Sports', 'Health', 'Nature', 'Business']
+let categories = []
 const popup = document.getElementById("categoryPopup");
 const bubbleContainer = document.getElementById("categoryBubbles");
 const saveBtn = document.getElementById("saveCategories");
 
-function showCategoryPopup(articleId){
+//This function is to load the categories in from the database
+async function loadCategories(){
+    const res = await fetch("http://127.0.0.1:5000/api/categories/fetch_all_categories");
+    data = await res.json();
+    console.log(data);
+    categories = data;
+}
+
+//This is the function to actually show the available categories to choose from
+async function showCategoryPopup(articleId){
+    await loadCategories();
     bubbleContainer.innerHTML = ''; //Im clearing here so when adding another article, the previous article's categories don't show up
 
     categories.forEach(category => {
@@ -388,6 +398,7 @@ function showCategoryPopup(articleId){
    
 }
 
+//Here we basically add the category and the article to our table within our database in order to keep track of which categories an article falls under
 async function addCategoryToTable(article_id, category){
     await fetch(`http://127.0.0.1:5000/api/articles/${article_id}/add_category`, {
         method: "POST",
@@ -399,86 +410,102 @@ async function addCategoryToTable(article_id, category){
 }
 
 ///////////////////////////////////////////////////////
-/// This is to fetch the categories for an article ////
-///////////////////////////////////////////////////////
-async function fetchCategories(article_id){
-    const response = await fetch (`http://127.0.0.1:5000/api/articles/${article_id}/categories`);
-    const categories = await response.json();
-    console.log(categories);
-    return categories;
-}
-
-///////////////////////////////////////////////////////
 ///// This is for querying articles by category///////////////////
 ///////////////////////////////////////////////////////
 const filterCategoriesButton = document.querySelector("#FilterCategoriesButton");
 const categoryDropdown = document.querySelector("#categoryDropdown");
 
-filterCategoriesButton.addEventListener("click", () => {
-    categoryDropdown.classList.remove("clicked");
-    categoryDropdown.innerHTML = "";
-    categories.forEach(category => {
-        categoryDropdown.innerHTML += `<label><input type="checkbox" value=${category}> ${category}</label><br></br>`
-    })
-    categoryDropdown.innerHTML += `<button id="submitCategoriesButton"> Submit </button>`;
+filterCategoriesButton.addEventListener("click", async () => {
+    showCategoriesFilterPopup();
+    categoryDropdown.innerHTML += `
+        <button id="submitCategoriesButton">Submit</button>
+        <button id="addCategoriesButton">Add custom category</button>
+    `;
+
     categoryDropdown.classList.add("clicked");
+});
 
-    const submitButton = categoryDropdown.querySelector("#submitCategoriesButton");
+async function showCategoriesFilterPopup(){
+    bubbleContainer.innerHTML = ''; //Im clearing here so when adding another article, the previous article's categories don't show up
+    await loadCategories();
+    categories.forEach(category => {
+        const categoryBubble = document.createElement("div");
+        categoryBubble.className = "bubble";
+        categoryBubble.innerText = category;
+        categoryBubble.addEventListener("click", () => {
+            categoryBubble.classList.add("selected");
+        });
+        bubbleContainer.appendChild(categoryBubble);
+    });
 
-    submitButton.addEventListener("click", (e) => {
-        e.preventDefault(); //Just to ensure no weird behavior happens here
-        const checkedBoxes = categoryDropdown.querySelectorAll('input[type="checkbox"]:checked'); //This gets all the boxes that have been chcked
-        let selectedCategories = [];
-        checkedBoxes.forEach((checkbox) => {
-            selectedCategories.push(checkbox.value);
-        })
-        console.log(selectedCategories);
-        if(selectedCategories.length === 0){
-            loadAllArticles();
-        }else {filterArticlesByCategory(selectedCategories);}
-        
+    popup.classList.remove("hidden");
+
+    saveBtn.addEventListener("click", async () => {
+        const selected = [...document.querySelectorAll(".bubble.selected")];
+        window.currentCategoryFilter = selected.map(b => b.innerText);
+
+        applyCombinedFilters();
+        popup.classList.add("hidden");
     })
-
-})
-
-async function filterArticlesByCategory(selectedCategories){
-    const res = await fetch("http://127.0.0.1:5000/api/articles/filterByCategories", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ categories: selectedCategories })
-    })
-    const filteredArticles = await res.json();
-    loadArticles(filteredArticles);
 }
 
 ///////////////////////////////////////////////////////
-///// This is for querying articles by timestamp///////////////////
+/// This is to fetch the categories for an article ////
 ///////////////////////////////////////////////////////
-const dateFilterButton = document.getElementById("dateFilterButton");
-const datePopup = document.getElementById("datePopup");
-const closeDatePopup = document.getElementById("closeDatePopup");
-const applyDateFilter = document.getElementById("applyDateFilter");
-const fromDateInput = document.getElementById("fromDate");
-const toDateInput = document.getElementById("toDate");
-
-//When we click on the button, it should show the date filtering section
-dateFilterButton.addEventListener("click", (e)=> {
-    datePopup.classList.remove("hidden");
-})
-
-closeDatePopup.addEventListener("click", (e) => {
-    datePopup.classList.add("hidden");
-})
-
-applyDateFilter.addEventListener("click", () => {
-    const startDate = fromDateInput.value;
-    const endDate = fromDateInput.value;
-
-    
-})
+async function fetchCategories(article_id){
+    const response = await fetch (`http://127.0.0.1:5000/api/articles/${article_id}/categories`);
+    const categories = await response.json();
+    //console.log(categories);
+    return categories;
+}
 
 
-loadAllArticles();
+
+
+//This is the logic to basically add the custom category to our list of categories
+const customPopup = document.getElementById("customCategoryPopup");
+const newCategoryInput = document.getElementById("newCategoryInput");
+const saveNewCategory = document.getElementById("saveNewCategory");
+const closeCustomCategoryPopup = document.getElementById("closeCustomCategoryPopup");
+
+saveNewCategory.addEventListener("click", async () => {
+    const newCategory = newCategoryInput.value.trim();
+
+    if (newCategory === "") return;
+
+    // Add category to the list
+    const res = await fetch("http://127.0.0.1:5000/api/categories/add_category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCategory })
+    });
+
+    console.log(categories);
+
+    if (!res.ok) {
+        alert("Category already exists or failed to save.");
+        return;
+    }
+
+    await loadCategories();
+    console.log(categories);
+    // Close popup
+    customPopup.classList.add("hidden");
+    newCategoryInput.value = "";
+
+    // Refresh dropdown
+    filterCategoriesButton.click();
+});
+
+// Close popup without saving
+closeCustomCategoryPopup.addEventListener("click", () => {
+    customPopup.classList.add("hidden");
+    newCategoryInput.value = "";
+});
+
+
+
+
+
+
 

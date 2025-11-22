@@ -187,6 +187,44 @@ def summarize_article(article_id):
 
     return jsonify({"summary": summary})
 
+
+###########################################
+#### THIS IS FOR ALL CATEGORY STUFF #######
+###########################################
+
+#This is to get all the available categories    
+@app.route("/api/categories/fetch_all_categories", methods=["GET"])
+def get_all_categories():
+    conn = sqlite3.connect("articles_notes.db")
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+
+    rows = c.execute("SELECT category FROM available_categories").fetchall()
+    categories = [row["category"] for row in rows]
+    conn.close()
+    return jsonify(categories)
+
+#This is to add a category to the available categories that you can choose from
+@app.route("/api/categories/add_category", methods=["POST"])
+def add_global_category():
+    data = request.get_json()
+    new_category = data.get("name")
+
+    if not new_category:
+        return jsonify({"error": "Missing category name"}), 400
+
+    conn = sqlite3.connect("articles_notes.db")
+    try:
+        conn.execute("INSERT INTO available_categories (category) VALUES (?)", (new_category,))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({"error": "Category already exists"}), 400
+
+    conn.close()
+    return jsonify({"success": True})
+
+
 @app.route("/api/articles/<int:article_id>/add_category", methods = ["POST"])
 def add_category(article_id):
     data = request.get_json()
@@ -254,6 +292,9 @@ def filterByCategories():
     articles = [dict(row) for row in rows]
     return jsonify(articles)
     
+#########################################################
+"""This is all the filtering by date stuff """
+#########################################################
 @app.route("/api/articles/filterByDate", methods=["POST"])
 def filterByDate():
     data = request.get_json()
@@ -267,12 +308,55 @@ def filterByDate():
     conn.row_factory = sqlite3.Row #This is to access each row like a dictionaryy
     c = conn.cursor()
 
-    c.execute(query, {start_date, end_date})
+    c.execute(query, (start_date, end_date))
     rows = c.fetchall()
     conn.close()
 
     articles = [dict(row) for row in rows]
     return jsonify(articles)
+
+@app.route("/api/articles/filterCombined", methods=["POST"])
+def filter_combined():
+    data = request.get_json()
+    categories = data.get("categories", [])
+    start_date = data.get("startDate")
+    end_date = data.get("endDate")
+
+    query = "SELECT DISTINCT a.id, a.url, a.title, a.source, a.date_added, a.image_url FROM articles a"
+    joins = []
+    filters = []
+    params = []
+
+    # Join categories table if filtering by categories
+    if categories:
+        joins.append("JOIN categories c ON a.id = c.article_id")
+        filters.append("c.category IN ({})".format(",".join("?"*len(categories))))
+        params.extend(categories)
+
+    # Add date filtering
+    if start_date:
+        filters.append("a.date_added >= ?")
+        params.append(start_date)
+    if end_date:
+        filters.append("a.date_added <= ?")
+        params.append(end_date)
+
+    if joins:
+        query += " " + " ".join(joins)
+    if filters:
+        query += " WHERE " + " AND ".join(filters)
+
+    conn = sqlite3.connect("articles_notes.db")
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute(query, params)
+    rows = c.fetchall()
+    conn.close()
+
+    articles = [dict(row) for row in rows]
+    return jsonify(articles)
+
+
 
 #Here I initialize the articles and notes database
 def init_db():
@@ -308,6 +392,11 @@ def init_db():
               article_id INTEGER,
               category TEXT,
               FOREIGN KEY(article_id) REFERENCES articles(id))''')
+    
+    c.execute('''
+              CREATE TABLE IF NOT EXISTS available_categories (
+              id INTEGER PRIMARY KEY,
+              category TEXT UNIQUE)''')
     
 
     conn.commit()
